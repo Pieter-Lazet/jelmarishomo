@@ -1,0 +1,2554 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BakTracker 🍺</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%BA%3C/text%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+<style>
+/* ═══════════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════════ */
+:root {
+    --bg: #F5F0EB;
+    --text: #1A1A1A;
+    --text-2: #666666;
+    --text-3: #999999;
+    --accent: #C8922A;
+    --accent-light: rgba(200,146,42,0.12);
+    --accent-lighter: rgba(200,146,42,0.06);
+    --card: rgba(255,255,255,0.78);
+    --card-border: rgba(255,255,255,0.95);
+    --shadow-sm: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow: 0 8px 32px rgba(0,0,0,0.08);
+    --shadow-lg: 0 20px 60px rgba(0,0,0,0.12);
+    --shadow-hover: 0 12px 40px rgba(0,0,0,0.14);
+    --radius: 22px;
+    --radius-sm: 14px;
+    --radius-xs: 8px;
+    --header-h: 64px;
+    --nav-h: 60px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 9998;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONFETTI CANVAS
+═══════════════════════════════════════════════════════ */
+#confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9997;
+    display: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════════════════════════════ */
+.login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    transition: opacity 0.4s ease;
+}
+.login-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.login-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+.login-logo span { color: var(--accent); }
+.login-welcome {
+    font-size: 15px;
+    color: var(--text-2);
+    margin-bottom: 40px;
+    text-align: center;
+}
+.login-card {
+    background: var(--card);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+}
+.login-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.login-card-sub {
+    font-size: 14px;
+    color: var(--text-2);
+    margin-bottom: 28px;
+}
+.code-inputs {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.code-digit {
+    width: 62px;
+    height: 70px;
+    text-align: center;
+    font-size: 30px;
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: 16px;
+    background: white;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    -moz-appearance: textfield;
+    appearance: textfield;
+    caret-color: var(--accent);
+}
+.code-digit::-webkit-inner-spin-button,
+.code-digit::-webkit-outer-spin-button { -webkit-appearance: none; }
+.code-digit:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-light);
+    transform: scale(1.05);
+}
+.code-digit.filled {
+    border-color: rgba(200,146,42,0.4);
+    background: var(--accent-lighter);
+}
+.code-digit.error {
+    border-color: #DC3545 !important;
+    box-shadow: 0 0 0 3px rgba(220,53,69,0.15) !important;
+    animation: shake 0.45s ease;
+}
+.login-error {
+    font-size: 13px;
+    color: #DC3545;
+    font-weight: 500;
+    margin-bottom: 8px;
+    min-height: 18px;
+    transition: opacity 0.2s;
+}
+.login-spinner {
+    display: none;
+    font-size: 13px;
+    color: var(--text-3);
+    margin-bottom: 8px;
+}
+.login-hint {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 16px;
+    line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════════════ */
+.app-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: rgba(245,240,235,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(200,150,80,0.12);
+    z-index: 100;
+}
+.app-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.app-logo span { color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.user-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px 5px 6px;
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    border-radius: 100px;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: box-shadow 0.2s, transform 0.2s;
+    user-select: none;
+}
+.user-pill:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.user-pill-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+.btn-icon {
+    width: 38px; height: 38px;
+    border: none;
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--shadow-sm);
+}
+.btn-icon:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-icon:active { transform: scale(0.94); }
+
+/* ═══════════════════════════════════════════════════════
+   TAB NAVIGATION
+═══════════════════════════════════════════════════════ */
+.tab-nav {
+    position: fixed;
+    top: var(--header-h);
+    left: 0; right: 0;
+    height: var(--nav-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    background: rgba(245,240,235,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(200,150,80,0.08);
+    z-index: 99;
+}
+.tab-pills {
+    display: flex;
+    background: rgba(0,0,0,0.06);
+    border-radius: 100px;
+    padding: 4px;
+    gap: 2px;
+}
+.tab-btn {
+    padding: 7px 20px;
+    border: none;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-2);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    white-space: nowrap;
+}
+.tab-btn.active {
+    background: white;
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.tab-btn:not(.active):hover { color: var(--text); }
+
+/* ═══════════════════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════════════════ */
+.app-main {
+    margin-top: calc(var(--header-h) + var(--nav-h));
+    min-height: calc(100vh - var(--header-h) - var(--nav-h));
+    padding: 28px 20px 60px;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.tab-content { display: none; }
+.tab-content.active {
+    display: block;
+    animation: tabSlideIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* ═══════════════════════════════════════════════════════
+   GLASS CARD BASE
+═══════════════════════════════════════════════════════ */
+.glass-card {
+    background: var(--card);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+
+/* ═══════════════════════════════════════════════════════
+   HERO / MAIN SCREEN
+═══════════════════════════════════════════════════════ */
+.hero-card {
+    padding: 32px 28px;
+    text-align: center;
+    margin-bottom: 20px;
+    cursor: default;
+}
+.hero-card:hover { transform: none; box-shadow: var(--shadow); }
+.empty-icon { font-size: 72px; margin-bottom: 16px; animation: floatEmoji 3s ease-in-out infinite; }
+.empty-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+.empty-subtitle { font-size: 16px; color: var(--text-2); margin-bottom: 28px; }
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px rgba(200,146,42,0.35);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(200,146,42,0.45); }
+.btn-primary:active { transform: scale(0.97); }
+.nominee-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 10px;
+}
+.nominee-name-display {
+    font-family: 'Fraunces', serif;
+    font-size: 54px;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+.nominee-meta-display {
+    font-size: 14px;
+    color: var(--text-2);
+    margin-bottom: 28px;
+}
+.nominee-meta-display strong { color: var(--text); font-weight: 600; }
+.bak-counter-section {
+    background: var(--accent-light);
+    border: 1.5px solid rgba(200,146,42,0.2);
+    border-radius: var(--radius-sm);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+.bak-counter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.bak-emoji-icon { font-size: 36px; }
+.bak-count-number {
+    font-family: 'Fraunces', serif;
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent);
+    letter-spacing: -2px;
+}
+.bak-count-label {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--accent);
+    align-self: flex-end;
+    padding-bottom: 6px;
+}
+.bak-countdown { font-size: 13px; color: var(--text-2); font-weight: 500; }
+.bak-countdown strong { color: var(--accent); }
+
+/* Confirm button — active vs locked */
+.btn-confirm {
+    width: 100%;
+    padding: 18px 24px;
+    background: var(--text);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px rgba(26,26,26,0.2);
+    letter-spacing: -0.2px;
+}
+.btn-confirm:hover { background: #333; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(26,26,26,0.3); }
+.btn-confirm:active { transform: scale(0.98); }
+.btn-confirm-locked {
+    width: 100%;
+    padding: 18px 24px;
+    background: rgba(0,0,0,0.06);
+    color: var(--text-2);
+    border: 2px dashed rgba(0,0,0,0.12);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: not-allowed;
+    letter-spacing: -0.1px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   STATS TAB
+═══════════════════════════════════════════════════════ */
+.section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    letter-spacing: -0.3px;
+}
+.stats-section { margin-bottom: 28px; }
+.leaderboard { display: flex; flex-direction: column; gap: 10px; }
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+}
+.leaderboard-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.rank-badge {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    font-weight: 700;
+}
+.rank-badge.rank-1 { background: #FFD700; }
+.rank-badge.rank-2 { background: #C0C0C0; }
+.rank-badge.rank-3 { background: #CD7F32; color: white; }
+.rank-badge.rank-other { background: rgba(0,0,0,0.07); font-size: 12px; color: var(--text-2); }
+.lb-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white;
+    flex-shrink: 0;
+}
+.lb-info { flex: 1; min-width: 0; }
+.lb-name { font-weight: 600; font-size: 15px; }
+.lb-bar-wrap { height: 4px; background: rgba(0,0,0,0.07); border-radius: 4px; margin-top: 5px; }
+.lb-bar { height: 4px; border-radius: 4px; background: var(--accent); transition: width 1s cubic-bezier(0.34,1.56,0.64,1); }
+.lb-count {
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 700; color: var(--accent);
+    flex-shrink: 0;
+}
+.record-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.record-card {
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+}
+.record-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.record-card-icon { font-size: 28px; margin-bottom: 8px; }
+.record-card-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); margin-bottom: 4px; }
+.record-card-value { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; line-height: 1.2; }
+.record-card-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.chart-wrap {
+    padding: 20px;
+    border-radius: var(--radius);
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-sm);
+}
+.chart-title { font-size: 14px; font-weight: 600; color: var(--text-2); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ═══════════════════════════════════════════════════════
+   HISTORY TAB
+═══════════════════════════════════════════════════════ */
+.history-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-select {
+    flex: 1;
+    min-width: 130px;
+    padding: 10px 14px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    border-radius: 100px;
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filter-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.history-list { display: flex; flex-direction: column; gap: 10px; }
+.history-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+}
+.history-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.hist-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.hist-info { flex: 1; min-width: 0; }
+.hist-name { font-weight: 600; font-size: 15px; }
+.hist-meta { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+.hist-bakken { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.hist-count { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--accent); line-height: 1; }
+.hist-bak-label { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.empty-history { text-align: center; padding: 48px 20px; color: var(--text-2); font-size: 15px; }
+.empty-history-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* ═══════════════════════════════════════════════════════
+   MODALS
+═══════════════════════════════════════════════════════ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(245,240,235,0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+.modal-overlay.visible { opacity: 1; pointer-events: all; }
+.modal-overlay.visible .modal-box { transform: scale(1) translateY(0); opacity: 1; }
+.modal-box {
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 28px;
+    width: 100%;
+    max-width: 420px;
+    transform: scale(0.92) translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.modal-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }
+.modal-subtitle { font-size: 15px; color: var(--text-2); margin-bottom: 24px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+.btn-secondary {
+    flex: 1;
+    padding: 14px;
+    background: rgba(0,0,0,0.06);
+    color: var(--text);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-secondary:hover { background: rgba(0,0,0,0.1); }
+.btn-danger {
+    flex: 1;
+    padding: 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(200,146,42,0.3);
+}
+.btn-danger:hover { background: #B8821A; transform: translateY(-1px); }
+.btn-danger:active { transform: scale(0.97); }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.confirm-bak-info {
+    background: var(--accent-light);
+    border: 1.5px solid rgba(200,146,42,0.2);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+}
+.confirm-bak-number { font-family: 'Fraunces', serif; font-size: 52px; font-weight: 700; color: var(--accent); line-height: 1; }
+.confirm-bak-text { font-size: 14px; color: var(--text-2); margin-top: 4px; }
+
+/* Nomination picker */
+.modal-nominate { max-width: 520px; }
+.nominator-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent-lighter);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: var(--text-2);
+}
+.nominator-row strong { color: var(--text); }
+.nominator-picker-label { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text-2); }
+.nominee-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+    margin-bottom: 4px;
+}
+.pick-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 10px;
+    border-radius: var(--radius-sm);
+    background: rgba(0,0,0,0.04);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    user-select: none;
+    -webkit-user-select: none;
+}
+.pick-card:hover { background: rgba(0,0,0,0.07); transform: translateY(-2px); }
+.pick-card.selected {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    transform: scale(1.04);
+    box-shadow: 0 4px 16px rgba(200,146,42,0.2);
+}
+.pick-avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: white;
+}
+.pick-name { font-size: 13px; font-weight: 600; text-align: center; }
+.pick-bakken { font-size: 12px; color: var(--text-3); }
+
+/* Settings toggle switch */
+.settings-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(0,0,0,0.07); }
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.04);
+    border-radius: var(--radius-xs);
+}
+.settings-row-label { font-size: 14px; font-weight: 500; color: var(--text); }
+.settings-row-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.toggle-switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.15);
+    border-radius: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    left: 3px; top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+/* Settings modal */
+.settings-team-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.settings-member {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.04);
+    border-radius: var(--radius-xs);
+}
+.settings-member-name { flex: 1; font-weight: 500; font-size: 15px; }
+.settings-member-code {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    background: var(--accent-light);
+    border-radius: 6px;
+    cursor: pointer;
+    title: "Klik om te kopiëren";
+}
+.settings-member-code:hover { background: rgba(200,146,42,0.2); }
+.btn-remove {
+    width: 28px; height: 28px;
+    border: none;
+    background: rgba(220,53,69,0.1);
+    color: #DC3545;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+    font-weight: 700;
+    line-height: 1;
+}
+.btn-remove:hover { background: rgba(220,53,69,0.2); }
+.add-member-row { display: flex; gap: 8px; }
+.add-member-input {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+}
+.add-member-input:focus { border-color: var(--accent); }
+.btn-add {
+    padding: 11px 18px;
+    background: var(--text);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-add:hover { background: #333; }
+
+/* New member code reveal */
+.new-code-banner {
+    margin-top: 14px;
+    padding: 16px;
+    background: #F0FFF4;
+    border: 1.5px solid #86EFAC;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    display: none;
+}
+.new-code-banner.visible { display: block; animation: fadeUp 0.4s ease; }
+.new-code-person { font-size: 13px; color: #166534; margin-bottom: 6px; font-weight: 500; }
+.new-code-number {
+    font-family: 'Fraunces', serif;
+    font-size: 40px; font-weight: 700;
+    color: #16A34A;
+    letter-spacing: 8px;
+    margin-bottom: 6px;
+}
+.new-code-warning { font-size: 12px; color: #166534; margin-bottom: 10px; }
+.btn-copy-code {
+    padding: 8px 16px;
+    background: #16A34A;
+    color: white;
+    border: none;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-copy-code:hover { background: #15803D; }
+
+.modal-close-row { margin-top: 16px; text-align: center; }
+.btn-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-2);
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    padding: 8px;
+}
+.btn-modal-close:hover { color: var(--text); }
+
+/* Logout modal */
+.logout-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(0,0,0,0.04);
+    border-radius: var(--radius-sm);
+    margin-bottom: 4px;
+}
+.logout-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: white;
+}
+.logout-name { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; }
+.logout-role { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════ */
+@keyframes tabSlideIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes nomineeReveal {
+    0% { opacity: 0; transform: scale(0.75); filter: blur(24px); }
+    60% { filter: blur(0); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+@keyframes bakTickUp {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); color: #FFD700; }
+    70% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+@keyframes floatEmoji {
+    0%, 100% { transform: translateY(0px) rotate(-2deg); }
+    50% { transform: translateY(-12px) rotate(2deg); }
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+}
+
+.fade-up-1 { animation: fadeUp 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.05s both; }
+.fade-up-2 { animation: fadeUp 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.15s both; }
+.fade-up-3 { animation: fadeUp 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.25s both; }
+.nominee-reveal { animation: nomineeReveal 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.bak-animate { animation: bakTickUp 0.7s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════ */
+@media (max-width: 400px) {
+    .app-main { padding: 20px 16px 60px; }
+    .hero-card { padding: 24px 20px; }
+    .nominee-name-display { font-size: 44px; }
+    .bak-count-number { font-size: 52px; }
+    .modal-box { padding: 22px; }
+    .record-cards { grid-template-columns: 1fr; }
+    .tab-btn { padding: 7px 14px; font-size: 13px; }
+    .code-digit { width: 54px; height: 62px; font-size: 26px; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOOISTE BAK TAB
+═══════════════════════════════════════════════════════ */
+.mb-upload-card {
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+.mb-upload-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+}
+.mb-upload-sub {
+    font-size: 14px;
+    color: var(--text-2);
+    margin-bottom: 22px;
+}
+.mb-upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+.mb-select {
+    width: 100%;
+    max-width: 300px;
+    padding: 11px 14px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    background: white;
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.mb-select:focus { border-color: var(--accent); }
+.mb-file-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 24px;
+    background: var(--text);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+}
+.mb-file-label:hover { background: #333; transform: translateY(-1px); }
+.mb-file-input { display: none; }
+.mb-filename {
+    font-size: 13px;
+    color: var(--text-2);
+    min-height: 18px;
+    margin-top: 2px;
+}
+.mb-btn-upload {
+    padding: 13px 32px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(200,146,42,0.3);
+    width: 100%;
+    max-width: 300px;
+}
+.mb-btn-upload:hover { background: #B8821A; transform: translateY(-1px); }
+.mb-btn-upload:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.mb-success {
+    display: none;
+    margin-top: 12px;
+    padding: 14px 18px;
+    background: #F0FFF4;
+    border: 1.5px solid #86EFAC;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: #166534;
+    font-weight: 500;
+    animation: fadeUp 0.4s ease;
+}
+.mb-success.visible { display: block; }
+.mb-counter-card {
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+.mb-counter-number {
+    font-family: 'Fraunces', serif;
+    font-size: 64px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    display: block;
+}
+.mb-counter-label {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 8px 0 6px;
+}
+.mb-counter-sub {
+    font-size: 13px;
+    color: var(--text-3);
+}
+.mb-winner-card {
+    background: linear-gradient(135deg, rgba(200,146,42,0.12), rgba(200,146,42,0.04));
+    border: 1.5px solid rgba(200,146,42,0.3);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 16px;
+}
+.mb-winner-title {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--accent);
+}
+.mb-winner-video {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    max-height: 340px;
+    background: #000;
+}
+.mb-winner-meta {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-top: 8px;
+}
+/* Admin panel */
+.mb-admin-section {
+    background: var(--card);
+    border: 1.5px dashed rgba(200,146,42,0.4);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 16px;
+}
+.mb-admin-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.mb-admin-empty {
+    font-size: 14px;
+    color: var(--text-3);
+    text-align: center;
+    padding: 16px 0;
+}
+.mb-video-item {
+    border: 1.5px solid rgba(0,0,0,0.08);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.6);
+}
+.mb-video-item video {
+    width: 100%;
+    border-radius: 8px;
+    max-height: 220px;
+    background: #000;
+    margin-bottom: 10px;
+}
+.mb-video-meta {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-bottom: 10px;
+}
+.mb-video-meta strong { color: var(--text); }
+.mb-toggle-btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: var(--radius-xs);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.mb-toggle-btn.make-visible {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 3px 10px rgba(200,146,42,0.25);
+}
+.mb-toggle-btn.make-visible:hover { background: #B8821A; }
+.mb-toggle-btn.make-hidden {
+    background: rgba(0,0,0,0.08);
+    color: var(--text);
+}
+.mb-toggle-btn.make-hidden:hover { background: rgba(0,0,0,0.14); }
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div class="login-screen" id="login-screen">
+    <div class="login-logo">🍺 <span>Bak</span>Tracker</div>
+    <div class="login-welcome">Het ultieme kantoor-drankspel</div>
+    <div class="login-card">
+        <div class="login-card-title">Welkom terug 👋</div>
+        <div class="login-card-sub">Voer je persoonlijke code in</div>
+        <div class="code-inputs" id="code-inputs">
+            <input type="tel" maxlength="1" class="code-digit" id="d0" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="tel" maxlength="1" class="code-digit" id="d1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="tel" maxlength="1" class="code-digit" id="d2" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="tel" maxlength="1" class="code-digit" id="d3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        </div>
+        <div class="login-error" id="login-error"></div>
+        <div class="login-spinner" id="login-spinner">⏳ Controleren...</div>
+        <div class="login-hint">Vraag je code aan Pieter als je hem kwijt bent.</div>
+    </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<header class="app-header">
+    <div class="app-logo">🍺 <span>Bak</span>Tracker</div>
+    <div class="header-right">
+        <div class="user-pill" id="user-pill" onclick="showModal('modal-logout')" style="display:none">
+            <div class="user-pill-avatar" id="user-pill-avatar"></div>
+            <span id="user-pill-name"></span>
+        </div>
+        <button class="btn-icon" id="btn-settings" onclick="openSettings()" title="Team beheer" style="display:none">⚙️</button>
+    </div>
+</header>
+
+<!-- ═══ TAB NAV ═══ -->
+<nav class="tab-nav">
+    <div class="tab-pills">
+        <button class="tab-btn active" data-tab="main" onclick="switchTab('main')">Huidig</button>
+        <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">Statistieken</button>
+        <button class="tab-btn" data-tab="history" onclick="switchTab('history')">Geschiedenis</button>
+        <button class="tab-btn" data-tab="mooiste-bak" onclick="switchTab('mooiste-bak')">🏆 Mooiste Bak</button>
+    </div>
+</nav>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main class="app-main" id="app-main">
+
+    <!-- TAB: HUIDIG -->
+    <div id="tab-main" class="tab-content active">
+        <div id="main-content"></div>
+    </div>
+
+    <!-- TAB: STATISTIEKEN -->
+    <div id="tab-stats" class="tab-content">
+        <div id="stats-content"></div>
+    </div>
+
+    <!-- TAB: MOOISTE BAK -->
+    <div id="tab-mooiste-bak" class="tab-content">
+        <div id="mooiste-bak-content"></div>
+    </div>
+
+    <!-- TAB: GESCHIEDENIS -->
+    <div id="tab-history" class="tab-content">
+        <div class="history-filters fade-up-1">
+            <select class="filter-select" id="filter-person" onchange="renderHistory()">
+                <option value="">Iedereen</option>
+            </select>
+            <select class="filter-select" id="filter-month" onchange="renderHistory()">
+                <option value="">Alle maanden</option>
+            </select>
+        </div>
+        <div id="history-list" class="history-list fade-up-2"></div>
+    </div>
+
+</main>
+
+<!-- ═══ MODAL: CONFIRM BAK ═══ -->
+<div class="modal-overlay" id="modal-confirm">
+    <div class="modal-box">
+        <div class="modal-title">Weet je het zeker? 🍺</div>
+        <div class="modal-subtitle" id="confirm-subtitle"></div>
+        <div class="confirm-bak-info">
+            <div class="confirm-bak-number" id="confirm-bak-number">1</div>
+            <div class="confirm-bak-text" id="confirm-bak-text">bak te trekken</div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="hideModal('modal-confirm')">Annuleren</button>
+            <button class="btn-danger" onclick="confirmBak()">Ja, bevestigen! 🍺</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL: NOMINATE ═══ -->
+<div class="modal-overlay" id="modal-nominate">
+    <div class="modal-box modal-nominate">
+        <div class="modal-title">Wie trekt de bak? 🃏</div>
+        <div class="modal-subtitle">Kies de volgende persoon.</div>
+        <div class="nominator-row" id="nominator-row">
+            <span>🎯 Jij (<strong id="nominator-name-display">—</strong>) nomineert:</span>
+        </div>
+        <div class="nominator-picker-label">Selecteer een collega:</div>
+        <div class="nominee-grid" id="nominee-grid"></div>
+        <div class="modal-actions" style="margin-top:20px">
+            <button class="btn-secondary" onclick="hideModal('modal-nominate')">Annuleren</button>
+            <button class="btn-danger" id="btn-confirm-nominate" onclick="confirmNomination()" disabled>Selecteer iemand...</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL: SETTINGS (admin only) ═══ -->
+<div class="modal-overlay" id="modal-settings">
+    <div class="modal-box">
+        <div class="modal-title">Team Beheer ⚙️</div>
+        <div class="modal-subtitle">Voeg teamleden toe of verwijder ze.</div>
+        <div class="settings-team-list" id="settings-team-list"></div>
+        <div class="add-member-row">
+            <input type="text" class="add-member-input" id="new-member-input" placeholder="Naam toevoegen..." maxlength="30" onkeydown="if(event.key==='Enter')addTeamMember()">
+            <button class="btn-add" onclick="addTeamMember()">＋</button>
+        </div>
+        <div class="new-code-banner" id="new-code-banner">
+            <div class="new-code-person" id="new-code-person"></div>
+            <div class="new-code-number" id="new-code-number"></div>
+            <div class="new-code-warning">⚠️ Noteer dit! Je ziet de code maar één keer.</div>
+            <button class="btn-copy-code" onclick="copyNewCode()">📋 Kopieer code</button>
+        </div>
+        <div class="modal-close-row">
+            <button class="btn-modal-close" onclick="hideModal('modal-settings')">Sluiten</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL: LOGOUT ═══ -->
+<div class="modal-overlay" id="modal-logout">
+    <div class="modal-box">
+        <div class="modal-title">Uitloggen</div>
+        <div class="modal-subtitle">Wil je uitloggen van BakTracker?</div>
+        <div class="logout-info">
+            <div class="logout-avatar" id="logout-avatar"></div>
+            <div>
+                <div class="logout-name" id="logout-name"></div>
+                <div class="logout-role" id="logout-role"></div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="hideModal('modal-logout')">Annuleren</button>
+            <button class="btn-danger" onclick="logout()">Uitloggen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-easter-egg" onclick="if(event.target===this){hideEasterEgg()}">
+    <div class="modal-box" style="max-width:640px;text-align:center">
+        <div id="easter-egg-content"></div>
+        <div class="modal-close-row">
+            <button class="btn-modal-close" onclick="hideEasterEgg()">Sluiten</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ╔══════════════════════════════════════════════════════════════════════╗
+ * ║                    BAKTRACKER — SETUP GIDS                          ║
+ * ╠══════════════════════════════════════════════════════════════════════╣
+ * ║  1. Maak een gratis project aan op https://supabase.com             ║
+ * ║  2. Ga naar: Dashboard → SQL Editor → New Query                     ║
+ * ║  3. Voer de SQL hieronder (STAP A) uit                              ║
+ * ║  4. Vul SUPABASE_URL en SUPABASE_ANON_KEY in (staan al ingevuld)    ║
+ * ║  5. Push naar GitHub                                                ║
+ * ║  6. Ga naar https://vercel.com → New Project → Import GitHub repo   ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
+ *
+ * ── STAP A: SQL OM UIT TE VOEREN IN SUPABASE SQL EDITOR ──────────────
+ *
+ * CREATE TABLE IF NOT EXISTS team_members (
+ *     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ *     name TEXT NOT NULL UNIQUE,
+ *     active BOOLEAN DEFAULT true,
+ *     code TEXT,
+ *     created_at TIMESTAMPTZ DEFAULT NOW()
+ * );
+ *
+ * CREATE TABLE IF NOT EXISTS current_nominee (
+ *     id INTEGER PRIMARY KEY DEFAULT 1,
+ *     name TEXT,
+ *     nominated_by TEXT,
+ *     nominated_at TIMESTAMPTZ
+ * );
+ *
+ * INSERT INTO current_nominee (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+ *
+ * CREATE TABLE IF NOT EXISTS rounds (
+ *     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ *     nominee TEXT NOT NULL,
+ *     nominated_by TEXT,
+ *     bakken_count INTEGER DEFAULT 1,
+ *     nominated_at TIMESTAMPTZ,
+ *     confirmed_at TIMESTAMPTZ DEFAULT NOW(),
+ *     created_at TIMESTAMPTZ DEFAULT NOW()
+ * );
+ *
+ * ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+ * ALTER TABLE current_nominee ENABLE ROW LEVEL SECURITY;
+ * ALTER TABLE rounds ENABLE ROW LEVEL SECURITY;
+ *
+ * CREATE POLICY "allow_all" ON team_members FOR ALL USING (true) WITH CHECK (true);
+ * CREATE POLICY "allow_all" ON current_nominee FOR ALL USING (true) WITH CHECK (true);
+ * CREATE POLICY "allow_all" ON rounds FOR ALL USING (true) WITH CHECK (true);
+ *
+ * ALTER TABLE current_nominee ADD COLUMN IF NOT EXISTS count_all_bakken BOOLEAN DEFAULT true;
+ *
+ * ALTER PUBLICATION supabase_realtime ADD TABLE current_nominee;
+ * ALTER PUBLICATION supabase_realtime ADD TABLE rounds;
+ * ALTER PUBLICATION supabase_realtime ADD TABLE team_members;
+ *
+ * ── STAP B: MOOISTE BAK — Voer ook dit uit ───────────────────────
+ *
+ * CREATE TABLE IF NOT EXISTS bak_videos (
+ *   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+ *   uploaded_by text NOT NULL,
+ *   uploaded_at timestamptz DEFAULT now(),
+ *   storage_path text NOT NULL,
+ *   is_visible boolean DEFAULT false
+ * );
+ *
+ * ALTER TABLE bak_videos ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "allow_all" ON bak_videos FOR ALL USING (true) WITH CHECK (true);
+ *
+ * -- Maak ook een storage bucket aan:
+ * -- Ga naar: Storage → New Bucket → naam: bak-videos → Private: aan
+ * -- Voeg daarna een policy toe: Storage → bak-videos → Policies → New policy
+ * --   Name: allow_all, Allowed operations: SELECT INSERT UPDATE DELETE, Target roles: anon
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ *
+ * INSERT INTO team_members (name, code) VALUES
+ *     ('Pieter',  '4821'),
+ *     ('Daan',    '7364'),
+ *     ('Marek',   '2953'),
+ *     ('Teuntje', '6147'),
+ *     ('Jos',     '8392'),
+ *     ('Izara',   '5716'),
+ *     ('Thomas',  '3285')
+ * ON CONFLICT (name) DO UPDATE SET code = EXCLUDED.code;
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ */
+
+// ╔══════════════════════════════════╗
+// ║  🔧 SUPABASE CONNECTIE          ║
+// ╚══════════════════════════════════╝
+const SUPABASE_URL = 'https://lsktjorfosqerlpmltoe.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxza3Rqb3Jmb3NxZXJscG1sdG9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTI0MDksImV4cCI6MjA4OTUyODQwOX0.j7rCGu6tegv3WzTu_qg6w4HSRVWdJ9awcq4POBDO5rU';
+
+// ╔══════════════════════════════════════════════╗
+// ║  🔧 CLOUDFLARE CONFIG                        ║
+// ╚══════════════════════════════════════════════╝
+const CF_WORKER_URL = 'https://mute-snow-73bf.pmlgmr-yt.workers.dev';
+const R2_PUBLIC_URL = 'https://pub-9f9d6cf5a31d4ed4a08a9e4ec8fda0f3.r2.dev';
+
+// ╔══════════════════════════════════════════════╗
+// ║  🔑 CODES — DEEL DEZE MET JE COLLEGA'S      ║
+// ║  Elke persoon heeft een unieke 4-cijfer code ║
+// ╚══════════════════════════════════════════════╝
+const USER_CODES = {
+    'Pieter':  '4821',
+    'Daan':    '7364',
+    'Marek':   '2953',
+    'Teuntje': '6147',
+    'Jos':     '8392',
+    'Izara':   '5716',
+    'Thomas':  '3285',
+};
+
+// ╔════════════════════════════════════════════════╗
+// ║  🛡️ ADMIN CODE — GEEF DIT AAN NIEMAND ANDERS  ║
+// ╚════════════════════════════════════════════════╝
+const ADMIN_CODE = '9174';
+
+// ╔══════════════════════════════════╗
+// ║  👥 INITIEEL TEAM (fallback)    ║
+// ╚══════════════════════════════════╝
+const INITIAL_TEAM = ['Pieter', 'Daan', 'Marek', 'Teuntje', 'Jos', 'Izara', 'Thomas'];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let sb = null;
+let demoMode = false;
+
+const state = {
+    currentNominee: null,
+    teamMembers: [...INITIAL_TEAM],
+    rounds: [],
+    currentTab: 'main',
+    selectedNominee: null,
+    charts: {},
+    lastBakCount: 0,
+    dynamicCodes: {},   // codes for members added via admin panel (fetched from Supabase)
+    bakVideos: [],
+};
+
+let bakTimer = null;
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+    // Check if already logged in
+    const user = getLoggedInUser();
+    if (user) {
+        showApp(user);
+    } else {
+        initLoginScreen();
+        return;
+    }
+
+    await bootApp();
+}
+
+async function bootApp() {
+    const isSetup = !SUPABASE_URL.includes('YOUR_') && !SUPABASE_ANON_KEY.includes('YOUR_');
+    if (!isSetup) {
+        demoMode = true;
+    } else {
+        try {
+            sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            await Promise.all([loadTeamMembers(), loadCurrentNominee(), loadRounds(), loadBakVideos()]);
+            await loadDynamicCodes();
+            setupRealtime();
+        } catch (e) {
+            console.error('Supabase error:', e);
+            demoMode = true;
+        }
+    }
+    renderMain();
+    renderHistoryFilters();
+    startBakTimer();
+}
+
+// ═══════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════
+function initLoginScreen() {
+    const digits = document.querySelectorAll('.code-digit');
+    digits.forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+            // Only allow digits
+            input.value = input.value.replace(/[^0-9]/g, '').slice(-1);
+            input.classList.toggle('filled', input.value !== '');
+
+            if (input.value && idx < 3) {
+                digits[idx + 1].focus();
+            }
+            // Auto-submit when all 4 filled
+            if ([...digits].every(d => d.value !== '')) {
+                attemptLogin([...digits].map(d => d.value).join(''));
+            }
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && idx > 0) {
+                digits[idx - 1].focus();
+                digits[idx - 1].value = '';
+                digits[idx - 1].classList.remove('filled');
+            }
+            // On paste
+            if (e.key === 'v' && (e.ctrlKey || e.metaKey)) return;
+        });
+
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4);
+            pasted.split('').forEach((ch, i) => {
+                if (digits[i]) { digits[i].value = ch; digits[i].classList.add('filled'); }
+            });
+            if (pasted.length === 4) attemptLogin(pasted);
+            else digits[Math.min(pasted.length, 3)].focus();
+        });
+    });
+
+    // Focus first input
+    setTimeout(() => digits[0].focus(), 300);
+}
+
+async function attemptLogin(code) {
+    const digits = document.querySelectorAll('.code-digit');
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('login-spinner').style.display = 'block';
+
+    // Small delay for feel
+    await new Promise(r => setTimeout(r, 300));
+
+    // Check admin code
+    if (code === ADMIN_CODE) {
+        document.getElementById('login-spinner').style.display = 'none';
+        setLoggedInUser('__admin__');
+        showApp('__admin__');
+        await bootApp();
+        return;
+    }
+
+    // Check hardcoded user codes
+    const userName = Object.entries(USER_CODES).find(([, c]) => c === code)?.[0];
+    if (userName) {
+        document.getElementById('login-spinner').style.display = 'none';
+        setLoggedInUser(userName);
+        showApp(userName);
+        await bootApp();
+        return;
+    }
+
+    // Check dynamic codes in Supabase (for members added via admin)
+    if (!SUPABASE_URL.includes('YOUR_')) {
+        try {
+            if (!sb) sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            const { data } = await sb.from('team_members').select('name').eq('code', code).eq('active', true).single();
+            if (data?.name) {
+                document.getElementById('login-spinner').style.display = 'none';
+                setLoggedInUser(data.name);
+                showApp(data.name);
+                await bootApp();
+                return;
+            }
+        } catch (_) {}
+    }
+
+    // Wrong code
+    document.getElementById('login-spinner').style.display = 'none';
+    document.getElementById('login-error').textContent = 'Verkeerde code. Probeer opnieuw.';
+    digits.forEach(d => { d.classList.add('error'); d.value = ''; d.classList.remove('filled'); });
+    digits[0].focus();
+    setTimeout(() => digits.forEach(d => d.classList.remove('error')), 600);
+}
+
+function showApp(user) {
+    document.getElementById('login-screen').classList.add('hidden');
+
+    // Update header
+    const isAdmin = user === '__admin__';
+    const displayName = isAdmin ? 'Admin' : user;
+    const color = isAdmin ? '#6B8EA8' : getAvatarColor(user);
+
+    const pill = document.getElementById('user-pill');
+    const pillAvatar = document.getElementById('user-pill-avatar');
+    const pillName = document.getElementById('user-pill-name');
+    pill.style.display = 'flex';
+    pillAvatar.style.background = color;
+    pillAvatar.textContent = isAdmin ? '🛡️' : getInitials(user);
+    pillName.textContent = displayName;
+
+    // Admin settings button
+    if (isAdmin) document.getElementById('btn-settings').style.display = 'flex';
+
+    // Logout modal content
+    document.getElementById('logout-avatar').style.background = color;
+    document.getElementById('logout-avatar').textContent = isAdmin ? '🛡️' : getInitials(user);
+    document.getElementById('logout-name').textContent = displayName;
+    document.getElementById('logout-role').textContent = isAdmin ? 'Beheerder' : 'Teamlid';
+}
+
+function logout() {
+    hideModal('modal-logout');
+    localStorage.removeItem('baktracker-user');
+    // Reset state
+    if (bakTimer) clearInterval(bakTimer);
+    Object.values(state.charts).forEach(c => { try { c.destroy(); } catch(_){} });
+    state.charts = {};
+    // Reload page for clean state
+    window.location.reload();
+}
+
+// ═══════════════════════════════════════════════════════
+// IDENTITY STORAGE
+// ═══════════════════════════════════════════════════════
+function getLoggedInUser() { return localStorage.getItem('baktracker-user') || ''; }
+function setLoggedInUser(name) { localStorage.setItem('baktracker-user', name); }
+
+// ═══════════════════════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════════════════════
+async function loadTeamMembers() {
+    const { data, error } = await sb.from('team_members').select('name').eq('active', true).order('name');
+    if (!error && data?.length) state.teamMembers = data.map(m => m.name);
+}
+
+async function loadCurrentNominee() {
+    const { data, error } = await sb.from('current_nominee').select('*').eq('id', 1).single();
+    if (!error && data) {
+        if (data.name) state.currentNominee = data;
+        else state.currentNominee = null;
+    }
+}
+
+async function loadRounds() {
+    const { data, error } = await sb.from('rounds').select('*').order('confirmed_at', { ascending: false });
+    if (!error && data) state.rounds = data;
+}
+
+async function loadDynamicCodes() {
+    // Load codes for dynamically-added members (not in USER_CODES)
+    if (!sb) return;
+    const { data } = await sb.from('team_members').select('name, code').eq('active', true);
+    if (data) data.forEach(m => { if (m.code) state.dynamicCodes[m.name] = m.code; });
+}
+
+// ═══════════════════════════════════════════════════════
+// REALTIME
+// ═══════════════════════════════════════════════════════
+function setupRealtime() {
+    sb.channel('baktracker-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'current_nominee' }, (payload) => {
+            const row = payload.new;
+            state.currentNominee = row?.name ? row : null;
+            renderMain();
+            startBakTimer();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rounds' }, (payload) => {
+            state.rounds.unshift(payload.new);
+            if (state.currentTab === 'stats') renderStats();
+            if (state.currentTab === 'history') renderHistory();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => {
+            loadTeamMembers().then(() => {
+                if (state.currentTab === 'stats') renderStats();
+            });
+        })
+        .subscribe();
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════
+function switchTab(tab) {
+    state.currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.tab === tab));
+    document.querySelectorAll('.tab-content').forEach(content =>
+        content.classList.toggle('active', content.id === `tab-${tab}`));
+    if (tab === 'stats') renderStats();
+    if (tab === 'history') renderHistory();
+    if (tab === 'mooiste-bak') renderMooisteBak();
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN TAB — RENDER
+// ═══════════════════════════════════════════════════════
+function renderMain() {
+    const container = document.getElementById('main-content');
+    const currentUser = getLoggedInUser();
+    const isAdmin = currentUser === '__admin__';
+
+    if (!state.currentNominee) {
+        // Only admin or any logged-in user can start a nomination from empty state
+        container.innerHTML = `
+            <div class="glass-card hero-card fade-up-1">
+                <div class="empty-icon">🃏</div>
+                <h2 class="empty-title">Niemand is genomineerd</h2>
+                <p class="empty-subtitle">Trek een kaart!</p>
+                <button class="btn-primary" onclick="openNominationPicker()">
+                    Nomineer iemand ➜
+                </button>
+            </div>`;
+    } else {
+        const { name, nominated_by, nominated_at } = state.currentNominee;
+        const bakken = calcBakken(nominated_at);
+        const bakLabel = bakken === 1 ? 'bak' : 'bakken';
+        const countdown = calcCountdown(nominated_at);
+        const ago = timeAgo(nominated_at);
+        const nominatedByText = nominated_by
+            ? `Genomineerd door <strong>${nominated_by}</strong> • ${ago}`
+            : `Genomineerd ${ago}`;
+
+        // Only the nominated person (or admin) can confirm
+        const canConfirm = currentUser === name || isAdmin;
+        const confirmBtn = canConfirm
+            ? `<button class="btn-confirm" onclick="showConfirmModal()">✓ Ik heb een bak getrokken</button>`
+            : `<button class="btn-confirm-locked">🔒 Alleen ${name} kan dit bevestigen</button>`;
+
+        container.innerHTML = `
+            <div class="glass-card hero-card nominee-reveal fade-up-1">
+                <div class="nominee-label">🎯 Aan de beurt:</div>
+                <div class="nominee-name-display">${escHtml(name)}</div>
+                <div class="nominee-meta-display">${nominatedByText}</div>
+                <div class="bak-counter-section">
+                    <div class="bak-counter">
+                        <span class="bak-emoji-icon">🍺</span>
+                        <span class="bak-count-number" id="bak-count">${bakken}</span>
+                        <span class="bak-count-label" id="bak-label">${bakLabel}</span>
+                    </div>
+                    <div class="bak-countdown" id="countdown-text"></div>
+                </div>
+                ${confirmBtn}
+            </div>`;
+
+        state.lastBakCount = bakken;
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// BAK CALCULATION
+// ═══════════════════════════════════════════════════════
+function calcBakken(nominatedAt) {
+    if (!nominatedAt) return 1;
+    const hours = (Date.now() - new Date(nominatedAt).getTime()) / 3600000;
+    return 1 + Math.floor(hours / 24);
+}
+
+function calcCountdown(nominatedAt) {
+    if (!nominatedAt) return '';
+    const hours = (Date.now() - new Date(nominatedAt).getTime()) / 3600000;
+    const currentBak = 1 + Math.floor(hours / 24);
+    const hoursUntilNext = currentBak * 24 - hours;
+    const h = Math.floor(hoursUntilNext);
+    const m = Math.floor((hoursUntilNext - h) * 60);
+    return `${h}u ${String(m).padStart(2, '0')}m`;
+}
+
+// ═══════════════════════════════════════════════════════
+// BAK TIMER
+// ═══════════════════════════════════════════════════════
+function startBakTimer() {
+    if (bakTimer) clearInterval(bakTimer);
+    if (!state.currentNominee) return;
+    bakTimer = setInterval(updateBakDisplay, 30000);
+}
+
+function updateBakDisplay() {
+    if (!state.currentNominee?.nominated_at) return;
+    const newCount = calcBakken(state.currentNominee.nominated_at);
+    const countEl = document.getElementById('bak-count');
+    const labelEl = document.getElementById('bak-label');
+    const countdownEl = document.getElementById('countdown-text');
+
+    if (countEl) {
+        if (newCount !== state.lastBakCount && state.lastBakCount > 0) {
+            countEl.classList.remove('bak-animate');
+            void countEl.offsetWidth;
+            countEl.classList.add('bak-animate');
+            countEl.addEventListener('animationend', () => countEl.classList.remove('bak-animate'), { once: true });
+        }
+        countEl.textContent = newCount;
+        state.lastBakCount = newCount;
+    }
+    if (labelEl) labelEl.textContent = newCount === 1 ? 'bak' : 'bakken';
+    if (countdownEl) {
+        const cd = calcCountdown(state.currentNominee.nominated_at);
+        countdownEl.innerHTML = cd ? `Volgende bak over: <strong>${cd}</strong>` : '';
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIRM MODAL
+// ═══════════════════════════════════════════════════════
+function showConfirmModal() {
+    if (!state.currentNominee) return;
+    const currentUser = getLoggedInUser();
+    const isNominee = currentUser === state.currentNominee.name || currentUser === '__admin__';
+    if (!isNominee) return; // Extra guard
+
+    const bakken = calcBakken(state.currentNominee.nominated_at);
+    const hours = Math.round((Date.now() - new Date(state.currentNominee.nominated_at).getTime()) / 3600000);
+    document.getElementById('confirm-bak-number').textContent = bakken;
+    document.getElementById('confirm-bak-text').textContent = bakken === 1 ? 'bak te trekken' : 'bakken te trekken';
+    document.getElementById('confirm-subtitle').textContent =
+        hours < 1 ? `Je bent minder dan een uur geleden genomineerd.`
+                  : `Je bent ${hours} uur geleden genomineerd.`;
+    showModal('modal-confirm');
+}
+
+async function confirmBak() {
+    if (!state.currentNominee) return;
+    const currentUser = getLoggedInUser();
+    const isAllowed = currentUser === state.currentNominee.name || currentUser === '__admin__';
+    if (!isAllowed) return;
+
+    const { name, nominated_by, nominated_at } = state.currentNominee;
+    const bakken = calcBakken(nominated_at);
+
+    hideModal('modal-confirm');
+
+    if (!demoMode && sb) {
+        await sb.from('rounds').insert({
+            nominee: name,
+            nominated_by: nominated_by || null,
+            bakken_count: bakken,
+            nominated_at: nominated_at,
+            confirmed_at: new Date().toISOString(),
+        });
+        await sb.from('current_nominee').update({
+            name: null, nominated_by: null, nominated_at: null
+        }).eq('id', 1);
+    } else {
+        state.rounds.unshift({ id: Date.now(), nominee: name, nominated_by, bakken_count: bakken, nominated_at, confirmed_at: new Date().toISOString() });
+        state.currentNominee = null;
+        renderMain();
+    }
+
+    launchConfetti();
+
+    // Only the confirmed person (or admin) opens the picker
+    setTimeout(() => openNominationPicker(name), 400);
+}
+
+// ═══════════════════════════════════════════════════════
+// NOMINATION PICKER
+// — Only callable by the person who just confirmed, or admin
+// ═══════════════════════════════════════════════════════
+function openNominationPicker(nominatorName) {
+    const currentUser = getLoggedInUser();
+    const isAdmin = currentUser === '__admin__';
+
+    // Determine effective nominator
+    const nominator = nominatorName || (isAdmin ? 'Admin' : currentUser);
+
+    state.selectedNominee = null;
+    document.getElementById('nominator-name-display').textContent = nominator;
+
+    // Build nominee grid — exclude nominator (unless admin, then show all)
+    const available = state.teamMembers.filter(m =>
+        isAdmin ? true : m !== nominator
+    );
+
+    document.getElementById('nominee-grid').innerHTML = available.map(nm => {
+        const totalBakken = state.rounds
+            .filter(r => r.nominee === nm)
+            .reduce((sum, r) => sum + bakkenScore(r), 0);
+        return `
+            <div class="pick-card" onclick="selectNominee('${escHtml(nm)}')" data-name="${escHtml(nm)}">
+                <div class="pick-avatar" style="background:${getAvatarColor(nm)}">${getInitials(nm)}</div>
+                <div class="pick-name">${escHtml(nm)}</div>
+                <div class="pick-bakken">${totalBakken} 🍺</div>
+            </div>`;
+    }).join('');
+
+    const btn = document.getElementById('btn-confirm-nominate');
+    btn.disabled = true;
+    btn.textContent = 'Selecteer iemand...';
+
+    showModal('modal-nominate');
+}
+
+function selectNominee(name) {
+    state.selectedNominee = name;
+    document.querySelectorAll('.pick-card').forEach(card =>
+        card.classList.toggle('selected', card.dataset.name === name));
+    const btn = document.getElementById('btn-confirm-nominate');
+    btn.disabled = false;
+    btn.textContent = `Nomineer ${name}! 🍺`;
+}
+
+async function confirmNomination() {
+    if (!state.selectedNominee) return;
+
+    const currentUser = getLoggedInUser();
+    const isAdmin = currentUser === '__admin__';
+    const nominator = isAdmin ? 'Admin' : currentUser;
+    const now = new Date().toISOString();
+
+    if (!demoMode && sb) {
+        await sb.from('current_nominee').update({
+            name: state.selectedNominee,
+            nominated_by: nominator,
+            nominated_at: now,
+        }).eq('id', 1);
+    } else {
+        state.currentNominee = { name: state.selectedNominee, nominated_by: nominator, nominated_at: now };
+        renderMain();
+        startBakTimer();
+    }
+
+    hideModal('modal-nominate');
+
+    // Easter egg: Teuntje gets a special redirect after completing nomination
+    if (currentUser.toLowerCase() === 'teuntje') {
+        setTimeout(() => {
+            window.location.href = 'https://www.youtube.com/watch?v=7Xf-q1enLTk&list=RD7Xf-q1enLTk&start_radio=1';
+        }, 600);
+    }
+
+    // Easter eggs for Daan, Thomas and Izara
+    if (currentUser === 'Daan') {
+        setTimeout(() => {
+            document.getElementById('easter-egg-content').innerHTML = '<iframe width="560" height="315" src="https://www.youtube.com/embed/mSYJ5Ehbo3U?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="border-radius:8px;max-width:100%"></iframe>';
+            showModal('modal-easter-egg');
+        }, 600);
+    }
+    if (currentUser === 'Thomas') {
+        setTimeout(() => {
+            document.getElementById('easter-egg-content').innerHTML = '<img src="https://d3t3ozftmdmh3i.cloudfront.net/staging/podcast_uploaded_episode/19299439/19299439-1714386277966-95641f3bf5861.jpg" style="max-width:100%;border-radius:8px" />';
+            showModal('modal-easter-egg');
+        }, 600);
+    }
+    if (currentUser === 'Izara') {
+        setTimeout(() => {
+            document.getElementById('easter-egg-content').innerHTML = '<iframe width="560" height="315" src="https://www.youtube.com/embed/wCkerYMffMo?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="border-radius:8px;max-width:100%"></iframe>';
+            showModal('modal-easter-egg');
+        }, 600);
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// STATS TAB
+function bakkenScore(r) {
+    return 1;
+}
+
+// ═══════════════════════════════════════════════════════
+function renderStats() {
+    const container = document.getElementById('stats-content');
+    const rounds = state.rounds;
+
+    if (!rounds.length) {
+        container.innerHTML = `
+            <div class="stats-section fade-up-1">
+                <div class="section-title">Statistieken</div>
+                <div class="glass-card" style="padding:32px;text-align:center;color:var(--text-2)">
+                    <div style="font-size:48px;margin-bottom:12px">📊</div>
+                    <div>Nog geen bakken getrokken.</div>
+                </div>
+            </div>`;
+        return;
+    }
+
+    const totals = {};
+    state.teamMembers.forEach(m => totals[m] = 0);
+    rounds.forEach(r => { totals[r.nominee] = (totals[r.nominee] || 0) + bakkenScore(r); });
+    const leaderboard = Object.entries(totals).sort(([,a],[,b]) => b - a);
+    const maxTotal = leaderboard[0]?.[1] || 1;
+
+    const lastDraw = {};
+    state.teamMembers.forEach(m => lastDraw[m] = null);
+    rounds.forEach(r => {
+        const d = new Date(r.confirmed_at || r.created_at);
+        if (!lastDraw[r.nominee] || d > lastDraw[r.nominee]) lastDraw[r.nominee] = d;
+    });
+    const now = new Date();
+    const streaks = Object.entries(lastDraw)
+        .map(([name, date]) => ({ name, days: date ? Math.floor((now - date) / 86400000) : 999 }))
+        .sort((a, b) => b.days - a.days);
+    const longestStreak = streaks[0];
+
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const monthTotals = {};
+    rounds.filter(r => (r.confirmed_at || r.created_at || '').startsWith(thisMonth))
+          .forEach(r => { monthTotals[r.nominee] = (monthTotals[r.nominee] || 0) + bakkenScore(r); });
+    const monthChamp = Object.entries(monthTotals).sort(([,a],[,b]) => b - a)[0];
+
+    const pairs = {};
+    rounds.filter(r => r.nominated_by && r.nominated_by !== 'Admin').forEach(r => {
+        const key = `${r.nominated_by} → ${r.nominee}`;
+        pairs[key] = (pairs[key] || 0) + bakkenScore(r);
+    });
+    const topPair = Object.entries(pairs).sort(([,a],[,b]) => b - a)[0];
+
+    container.innerHTML = `
+        <div class="stats-section fade-up-1">
+            <div class="section-title">🏆 Klassement</div>
+            <div class="leaderboard">
+                ${leaderboard.map(([name, count], i) => {
+                    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+                    const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
+                    const pct = Math.round((count / maxTotal) * 100);
+                    return `
+                        <div class="leaderboard-item">
+                            <div class="rank-badge ${rankClass}">${rankIcon}</div>
+                            <div class="lb-avatar" style="background:${getAvatarColor(name)}">${getInitials(name)}</div>
+                            <div class="lb-info">
+                                <div class="lb-name">${name}</div>
+                                <div class="lb-bar-wrap"><div class="lb-bar" style="width:0%" data-pct="${pct}"></div></div>
+                            </div>
+                            <div class="lb-count">${count}</div>
+                        </div>`;
+                }).join('')}
+            </div>
+        </div>
+        <div class="stats-section fade-up-2">
+            <div class="section-title">📅 Records</div>
+            <div class="record-cards">
+                <div class="record-card">
+                    <div class="record-card-icon">🔥</div>
+                    <div class="record-card-label">Langste streak</div>
+                    <div class="record-card-value">${longestStreak?.name || '—'}</div>
+                    <div class="record-card-sub">${longestStreak?.days === 999 ? 'Nog nooit' : `${longestStreak?.days}d geleden`}</div>
+                </div>
+                <div class="record-card">
+                    <div class="record-card-icon">🏅</div>
+                    <div class="record-card-label">Maandkampioen</div>
+                    <div class="record-card-value">${monthChamp ? monthChamp[0] : '—'}</div>
+                    <div class="record-card-sub">${monthChamp ? `${monthChamp[1]} 🍺 deze maand` : 'Nog niemand'}</div>
+                </div>
+                <div class="record-card" style="grid-column:1/-1">
+                    <div class="record-card-icon">🎯</div>
+                    <div class="record-card-label">Meest genomineerd door</div>
+                    <div class="record-card-value">${topPair ? topPair[0] : '—'}</div>
+                    <div class="record-card-sub">${topPair ? `${topPair[1]} keer` : 'Nog geen data'}</div>
+                </div>
+            </div>
+        </div>
+        <div class="stats-section fade-up-3">
+            <div class="section-title">📊 Per maand</div>
+            <div class="chart-wrap">
+                <div class="chart-title">Bakken per persoon per maand</div>
+                <canvas id="chart-monthly" height="220"></canvas>
+            </div>
+        </div>`;
+
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.lb-bar').forEach(bar => {
+            setTimeout(() => { bar.style.width = bar.dataset.pct + '%'; }, 100);
+        });
+    });
+    buildMonthlyChart();
+}
+
+function buildMonthlyChart() {
+    const canvas = document.getElementById('chart-monthly');
+    if (!canvas) return;
+    if (state.charts.monthly) { state.charts.monthly.destroy(); state.charts.monthly = null; }
+
+    const now = new Date();
+    const months = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+        return {
+            key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
+            label: d.toLocaleDateString('nl-NL', { month: 'short', year: '2-digit' }),
+        };
+    });
+
+    const datasets = state.teamMembers.map(name => ({
+        label: name,
+        data: months.map(m =>
+            state.rounds
+                .filter(r => r.nominee === name && (r.confirmed_at || r.created_at || '').startsWith(m.key))
+                .reduce((s, r) => s + bakkenScore(r), 0)
+        ),
+        backgroundColor: getAvatarColor(name) + 'CC',
+        borderColor: getAvatarColor(name),
+        borderWidth: 1,
+        borderRadius: 4,
+    }));
+
+    state.charts.monthly = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels: months.map(m => m.label), datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 12 }, boxWidth: 12, padding: 12 } },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} 🍺` } }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 12 } } },
+                y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'DM Sans', size: 12 }, stepSize: 1 } }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTORY TAB
+// ═══════════════════════════════════════════════════════
+function renderHistoryFilters() {
+    const personSel = document.getElementById('filter-person');
+    const monthSel = document.getElementById('filter-month');
+    const currentPerson = personSel.value;
+    const currentMonth = monthSel.value;
+    personSel.innerHTML = '<option value="">Iedereen</option>' +
+        state.teamMembers.map(m => `<option value="${escHtml(m)}" ${m === currentPerson ? 'selected' : ''}>${m}</option>`).join('');
+    const months = [...new Set(state.rounds.map(r => (r.confirmed_at || r.created_at || '').substring(0, 7)))].sort().reverse();
+    monthSel.innerHTML = '<option value="">Alle maanden</option>' +
+        months.map(m => {
+            const d = new Date(m + '-01');
+            const label = d.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+            return `<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${label}</option>`;
+        }).join('');
+}
+
+function renderHistory() {
+    renderHistoryFilters();
+    const personFilter = document.getElementById('filter-person').value;
+    const monthFilter = document.getElementById('filter-month').value;
+    let filtered = state.rounds;
+    if (personFilter) filtered = filtered.filter(r => r.nominee === personFilter);
+    if (monthFilter) filtered = filtered.filter(r => (r.confirmed_at || r.created_at || '').startsWith(monthFilter));
+    const container = document.getElementById('history-list');
+    if (!filtered.length) {
+        container.innerHTML = `<div class="empty-history"><div class="empty-history-icon">📭</div><div>Geen rondes gevonden.</div></div>`;
+        return;
+    }
+    container.innerHTML = filtered.map(r => {
+        const date = formatDate(r.confirmed_at || r.created_at);
+        const bakken = r.bakken_count || 1;
+        const byText = r.nominated_by ? `door ${r.nominated_by}` : '';
+        return `
+            <div class="history-item">
+                <div class="hist-avatar" style="background:${getAvatarColor(r.nominee)}">${getInitials(r.nominee)}</div>
+                <div class="hist-info">
+                    <div class="hist-name">${escHtml(r.nominee)}</div>
+                    <div class="hist-meta">${date}${byText ? ` • ${byText}` : ''}</div>
+                </div>
+                <div class="hist-bakken">
+                    <div class="hist-count">${bakken}</div>
+                    <div class="hist-bak-label">${bakken === 1 ? 'bak' : 'bakken'}</div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// TEAM MANAGEMENT (admin only)
+// ═══════════════════════════════════════════════════════
+function openSettings() {
+    if (getLoggedInUser() !== '__admin__') return;
+    document.getElementById('new-code-banner').classList.remove('visible');
+    renderSettingsList();
+    showModal('modal-settings');
+}
+
+function renderSettingsList() {
+    // Show codes for all members (hardcoded + dynamic)
+    const allCodes = { ...USER_CODES, ...state.dynamicCodes };
+    document.getElementById('settings-team-list').innerHTML =
+        state.teamMembers.map(name => {
+            const code = allCodes[name] || '????';
+            return `
+                <div class="settings-member">
+                    <div class="lb-avatar" style="background:${getAvatarColor(name)};width:32px;height:32px;font-size:12px">${getInitials(name)}</div>
+                    <div class="settings-member-name">${escHtml(name)}</div>
+                    <div class="settings-member-code" onclick="copyCode('${code}', '${escHtml(name)}')" title="Klik om te kopiëren">${code}</div>
+                    <button class="btn-remove" onclick="removeTeamMember('${escHtml(name)}')" title="Verwijder">×</button>
+                </div>`;
+        }).join('');
+}
+
+function copyCode(code, name) {
+    navigator.clipboard?.writeText(code).then(() => {
+        alert(`Code van ${name} gekopieerd: ${code}`);
+    }).catch(() => {
+        alert(`Code van ${name}: ${code}`);
+    });
+}
+
+let _lastGeneratedCode = '';
+async function addTeamMember() {
+    if (getLoggedInUser() !== '__admin__') return;
+    const input = document.getElementById('new-member-input');
+    const name = input.value.trim();
+    if (!name || state.teamMembers.includes(name)) return;
+
+    // Generate a unique 4-digit code
+    const allExistingCodes = new Set([
+        ...Object.values(USER_CODES),
+        ...Object.values(state.dynamicCodes),
+        ADMIN_CODE,
+    ]);
+    let newCode;
+    do {
+        newCode = String(Math.floor(1000 + Math.random() * 9000));
+    } while (allExistingCodes.has(newCode));
+
+    _lastGeneratedCode = newCode;
+
+    if (!demoMode && sb) {
+        await sb.from('team_members').insert({ name, active: true, code: newCode });
+        await loadTeamMembers();
+        state.dynamicCodes[name] = newCode;
+    } else {
+        state.teamMembers.push(name);
+        state.dynamicCodes[name] = newCode;
+    }
+
+    input.value = '';
+    renderSettingsList();
+
+    // Show code banner
+    document.getElementById('new-code-person').textContent = `Code voor ${name}:`;
+    document.getElementById('new-code-number').textContent = newCode;
+    const banner = document.getElementById('new-code-banner');
+    banner.classList.add('visible');
+}
+
+function copyNewCode() {
+    const name = document.getElementById('new-code-person').textContent.replace('Code voor ', '').replace(':', '').trim();
+    const code = document.getElementById('new-code-number').textContent.trim();
+    navigator.clipboard?.writeText(code).then(() => {
+        alert(`Code gekopieerd: ${code}`);
+    }).catch(() => {
+        alert(`Code voor ${name}: ${code}`);
+    });
+}
+
+async function removeTeamMember(name) {
+    if (getLoggedInUser() !== '__admin__') return;
+    if (!confirm(`${name} verwijderen uit het team?`)) return;
+    if (!demoMode && sb) {
+        await sb.from('team_members').update({ active: false }).eq('name', name);
+        await loadTeamMembers();
+    } else {
+        state.teamMembers = state.teamMembers.filter(m => m !== name);
+    }
+    delete state.dynamicCodes[name];
+    renderSettingsList();
+    document.getElementById('new-code-banner').classList.remove('visible');
+}
+
+// ═══════════════════════════════════════════════════════
+// MOOISTE BAK TAB
+// ═══════════════════════════════════════════════════════
+async function loadBakVideos() {
+    if (!sb) return;
+    const { data, error } = await sb.from('bak_videos').select('*').order('uploaded_at', { ascending: false });
+    if (!error && data) state.bakVideos = data;
+}
+
+function renderMooisteBak() {
+    const container = document.getElementById('mooiste-bak-content');
+    const currentUser = getLoggedInUser();
+    const isAdmin = currentUser === '__admin__';
+    const isLoggedIn = !!currentUser && currentUser !== '__admin__';
+
+    const totalCount = state.bakVideos.length;
+    const visibleVideos = state.bakVideos.filter(v => v.is_visible);
+
+    // Winner section (publicly visible videos) — storage_path is now the full R2 public URL
+    let winnerHtml = '';
+    if (visibleVideos.length > 0) {
+        winnerHtml = visibleVideos.map(v => `
+            <div class="mb-winner-card fade-up-1">
+                <div class="mb-winner-title">🏆 Winnaar!</div>
+                <video class="mb-winner-video" controls playsinline>
+                    <source src="${escHtml(v.storage_path)}">
+                </video>
+                <div class="mb-winner-meta">Ingezonden door <strong>${escHtml(v.uploaded_by)}</strong></div>
+            </div>`).join('');
+    }
+
+    // Upload section — only shown when a regular user is logged in
+    let uploadHtml = '';
+    if (isLoggedIn) {
+        uploadHtml = `
+        <div class="mb-upload-card fade-up-2">
+            <div class="mb-upload-title">Upload jouw bak 🎥</div>
+            <div class="mb-upload-sub">Stuur je beste bak-moment in als <strong>${escHtml(currentUser)}</strong></div>
+            <div class="mb-upload-form">
+                <div>
+                    <label class="mb-file-label" for="mb-file-input">📂 Kies video</label>
+                    <input type="file" class="mb-file-input" id="mb-file-input" accept="video/mp4,video/quicktime,video/webm" onchange="onMbFileChange(this)">
+                    <div class="mb-filename" id="mb-filename">Geen bestand gekozen</div>
+                </div>
+                <button class="mb-btn-upload" onclick="uploadBakVideo()">Upload jouw bak 🎥</button>
+            </div>
+            <div class="mb-success" id="mb-success">Ingezonden! De admin beoordeelt jouw bak 👀</div>
+        </div>`;
+    } else if (!isAdmin) {
+        uploadHtml = `
+        <div class="mb-upload-card fade-up-2" style="text-align:center">
+            <div class="mb-upload-title" style="font-size:18px">🔒 Inloggen vereist</div>
+            <div class="mb-upload-sub">Log in om jouw bak in te sturen</div>
+        </div>`;
+    }
+
+    // Admin section — storage_path is the full R2 public URL
+    let adminHtml = '';
+    if (isAdmin) {
+        const adminItems = state.bakVideos.map(v => {
+            const date = formatDate(v.uploaded_at);
+            const toggleLabel = v.is_visible ? 'Verberg 🙈' : 'Zichtbaar maken 👁';
+            const toggleClass = v.is_visible ? 'make-hidden' : 'make-visible';
+            return `
+            <div class="mb-video-item" id="mb-video-${escHtml(v.id)}">
+                <video controls playsinline>
+                    <source src="${escHtml(v.storage_path)}">
+                </video>
+                <div class="mb-video-meta">
+                    Door <strong>${escHtml(v.uploaded_by)}</strong> • ${date}
+                    ${v.is_visible ? ' • <span style="color:var(--accent);font-weight:600">Zichtbaar</span>' : ''}
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="mb-toggle-btn ${toggleClass}" onclick="toggleVideoVisibility('${escHtml(v.id)}', ${v.is_visible})">
+                        ${toggleLabel}
+                    </button>
+                    <button class="mb-toggle-btn" style="background:rgba(220,53,69,0.1);color:#DC3545" onclick="deleteVideo('${escHtml(v.id)}')">
+                        Verwijderen 🗑
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+
+        adminHtml = `
+        <div class="mb-admin-section fade-up-3">
+            <div class="mb-admin-title">🛡️ Admin — Alle inzendingen (${state.bakVideos.length})</div>
+            ${state.bakVideos.length === 0
+                ? '<div class="mb-admin-empty">Nog geen inzendingen.</div>'
+                : adminItems}
+        </div>`;
+    }
+
+    container.innerHTML = `
+        ${winnerHtml}
+        <div class="mb-counter-card fade-up-1">
+            <span class="mb-counter-number">${totalCount}</span>
+            <div class="mb-counter-label">🎬 ${totalCount === 1 ? 'bak ingezonden' : 'bakken ingezonden'}</div>
+            <div class="mb-counter-sub">De winnaar wordt bekend gemaakt door de admin</div>
+        </div>
+        ${uploadHtml}
+        ${adminHtml}
+    `;
+}
+
+function onMbFileChange(input) {
+    const el = document.getElementById('mb-filename');
+    el.textContent = input.files[0] ? input.files[0].name : 'Geen bestand gekozen';
+    document.getElementById('mb-success').classList.remove('visible');
+}
+
+async function uploadBakVideo() {
+    const uploaderName = getLoggedInUser();
+    if (!uploaderName || uploaderName === '__admin__') return;
+
+    const fileEl    = document.getElementById('mb-file-input');
+    const successEl = document.getElementById('mb-success');
+    const uploadBtn = document.querySelector('.mb-btn-upload');
+    const file      = fileEl.files[0];
+
+    if (!file) { alert('Kies eerst een video.'); return; }
+
+    const allowed = ['video/mp4', 'video/quicktime', 'video/webm'];
+    if (!allowed.includes(file.type)) { alert('Alleen mp4, mov of webm bestanden zijn toegestaan.'); return; }
+
+    if (demoMode || !sb) {
+        successEl.classList.add('visible');
+        fileEl.value = '';
+        document.getElementById('mb-filename').textContent = 'Geen bestand gekozen';
+        return;
+    }
+
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Bezig met uploaden...';
+
+    try {
+        const ext      = file.name.split('.').pop().toLowerCase();
+        const filename = `${Date.now()}_${uploaderName.replace(/\s+/g, '_')}.${ext}`;
+
+        // Stap 1: haal presigned URL op via de Cloudflare Worker
+        const workerRes = await fetch(`${CF_WORKER_URL}/get-upload-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename, contentType: file.type }),
+        });
+        if (!workerRes.ok) {
+            const err = await workerRes.json().catch(() => ({}));
+            throw new Error(err.error || `Worker fout: ${workerRes.status}`);
+        }
+        const { presignedUrl, publicUrl } = await workerRes.json();
+
+        // Stap 2: upload direct vanuit de browser naar R2
+        const r2Res = await fetch(presignedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: file,
+        });
+        if (!r2Res.ok) throw new Error(`R2 upload fout: ${r2Res.status}`);
+
+        // Stap 3: sla metadata op in Supabase (storage_path = de publieke R2 URL)
+        const { error: dbError } = await sb.from('bak_videos').insert({
+            uploaded_by: uploaderName,
+            storage_path: publicUrl,
+            is_visible: false,
+        });
+        if (dbError) throw dbError;
+
+        await loadBakVideos();
+        successEl.classList.add('visible');
+        fileEl.value = '';
+        document.getElementById('mb-filename').textContent = 'Geen bestand gekozen';
+
+        // Refresh teller
+        const counterEl = document.querySelector('.mb-counter-number');
+        if (counterEl) counterEl.textContent = state.bakVideos.length;
+        const labelEl = document.querySelector('.mb-counter-label');
+        if (labelEl) labelEl.textContent = `🎬 ${state.bakVideos.length === 1 ? 'bak ingezonden' : 'bakken ingezonden'}`;
+
+    } catch (err) {
+        console.error('Upload error:', err);
+        alert('Upload mislukt. Probeer opnieuw.\n' + (err.message || ''));
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload jouw bak 🎥';
+    }
+}
+
+async function deleteVideo(id) {
+    if (!sb || getLoggedInUser() !== '__admin__') return;
+    if (!confirm('Video permanent verwijderen?')) return;
+    const { error } = await sb.from('bak_videos').delete().eq('id', id);
+    if (error) { alert('Verwijderen mislukt.'); return; }
+    await loadBakVideos();
+    renderMooisteBak();
+}
+
+async function toggleVideoVisibility(id, currentlyVisible) {
+    if (!sb) return;
+    const newVisible = !currentlyVisible;
+    const { error } = await sb.from('bak_videos').update({ is_visible: newVisible }).eq('id', id);
+    if (error) { alert('Fout bij opslaan.'); return; }
+    await loadBakVideos();
+    renderMooisteBak();
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════════════
+function showModal(id) { document.getElementById(id).classList.add('visible'); }
+function hideModal(id) { document.getElementById(id).classList.remove('visible'); }
+function hideEasterEgg() { hideModal('modal-easter-egg'); document.getElementById('easter-egg-content').innerHTML = ''; }
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.classList.remove('visible');
+    });
+});
+
+// ═══════════════════════════════════════════════════════
+// CONFETTI
+// ═══════════════════════════════════════════════════════
+function launchConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.display = 'block';
+    const colors = ['#C8922A','#F5C842','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#1A1A1A','#FFD700'];
+    const particles = Array.from({ length: 120 }, () => ({
+        x: Math.random() * canvas.width, y: -20 - Math.random() * 80,
+        vx: (Math.random() - 0.5) * 7, vy: Math.random() * 4 + 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: Math.random() * 9 + 4, rotation: Math.random() * 360,
+        rotSpeed: (Math.random() - 0.5) * 10,
+        shape: Math.random() > 0.5 ? 'rect' : 'circle',
+    }));
+    let frame = 0;
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const alpha = Math.max(0, 1 - frame / 160);
+        particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.rotation += p.rotSpeed;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation * Math.PI / 180);
+            ctx.fillStyle = p.color;
+            if (p.shape === 'rect') { ctx.fillRect(-p.size/2, -p.size/4, p.size, p.size/2); }
+            else { ctx.beginPath(); ctx.arc(0, 0, p.size/2, 0, Math.PI*2); ctx.fill(); }
+            ctx.restore();
+        });
+        frame++;
+        if (frame < 200) requestAnimationFrame(draw);
+        else canvas.style.display = 'none';
+    }
+    draw();
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+function getAvatarColor(name) {
+    const palette = ['#C8922A','#E07A2F','#C05A3A','#7A9E7E','#6B8EA8','#C47A8A','#8A7AB0','#5A9E9A','#D4814A','#8BA89E','#9E7ABC','#4A9E8A'];
+    let hash = 5381;
+    for (let i = 0; i < name.length; i++) hash = (hash * 33) ^ name.charCodeAt(i);
+    return palette[Math.abs(hash) % palette.length];
+}
+function getInitials(name) {
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2);
+}
+function timeAgo(date) {
+    if (!date) return '';
+    const diff = (Date.now() - new Date(date).getTime()) / 1000;
+    if (diff < 60) return 'zojuist';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m geleden`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}u geleden`;
+    return `${Math.floor(diff / 86400)}d geleden`;
+}
+function formatDate(date) {
+    if (!date) return '—';
+    return new Date(date).toLocaleDateString('nl-NL', {
+        day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    });
+}
+function escHtml(str) {
+    return String(str).replace(/[&<>"']/g, c =>
+        ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+</script>
+</body>
+</html>
